@@ -1,0 +1,1044 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Teste Automatizado com Selenium | Prof. Daniel Costa</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --marinho: #0b1b3f;
+    --azul: #1f4fe0;
+    --azul-claro: #4c7dff;
+    --azul-suave: #e8eefc;
+    --fundo: #f4f6fb;
+    --cinza: #7a8399;
+    --cinza-claro: #dfe3ec;
+    --branco: #ffffff;
+    --verde: #18a058;
+    --vermelho: #d93a3a;
+    --amarelo: #e6a700;
+    --sombra: 0 10px 30px rgba(11, 27, 63, .10);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    height: 100%;
+    background: #0a1430;
+    font-family: "Poppins", "Segoe UI", Arial, sans-serif;
+    color: var(--marinho);
+    overflow: hidden;
+  }
+
+  /* ---------- palco 16:9 escalável ---------- */
+  #palco {
+    position: absolute;
+    top: 50%; left: 50%;
+    width: 1280px; height: 720px;
+    transform-origin: center center;
+  }
+
+  .slide {
+    position: absolute; inset: 0;
+    background: var(--branco);
+    padding: 64px 80px 70px;
+    overflow: hidden;
+    opacity: 0; visibility: hidden;
+    transition: opacity .45s ease, transform .45s ease;
+    transform: translateX(30px);
+  }
+  .slide.ativo { opacity: 1; visibility: visible; transform: none; }
+  .slide.anterior { transform: translateX(-30px); }
+
+  /* ---------- rodapé (inserido por JS em todos os slides) ---------- */
+  .rodape {
+    position: absolute; left: 80px; right: 80px; bottom: 24px;
+    display: flex; justify-content: space-between; align-items: center;
+    font-size: 13px; color: var(--cinza); letter-spacing: .3px;
+  }
+  .rodape .prof { font-weight: 600; color: var(--marinho); display: flex; align-items: center; gap: 10px; }
+  .rodape .prof::before { content: ""; width: 22px; height: 3px; background: var(--azul); border-radius: 2px; }
+  .slide.escuro .rodape, .slide.escuro .rodape .prof { color: rgba(255,255,255,.75); }
+  .rodape { z-index: 3; }
+  .rodape span:nth-child(3) { background: #fff; color: var(--marinho); font-weight: 600; padding: 3px 12px; border-radius: 20px;
+    box-shadow: 0 2px 8px rgba(11,27,63,.12); }
+  .slide.escuro .rodape span:nth-child(3), .slide.capa .rodape span:nth-child(3) { background: transparent; box-shadow: none; }
+  .slide.capa .rodape span:nth-child(2) { display: none; }
+  .slide.capa .rodape span:nth-child(3) { color: #fff; font-weight: 600; }
+
+  /* ---------- elementos gráficos (diagonais azuis) ---------- */
+  .diag { position: absolute; pointer-events: none; }
+  .diag.d1 { right: -120px; top: -80px; width: 520px; height: 900px;
+    background: linear-gradient(160deg, var(--azul-claro), var(--azul) 55%, var(--marinho));
+    clip-path: polygon(45% 0, 100% 0, 100% 100%, 0 100%); }
+  .diag.d2 { right: 300px; top: -40px; width: 160px; height: 820px; background: var(--marinho);
+    clip-path: polygon(70% 0, 100% 0, 30% 100%, 0 100%); opacity: .95; }
+  .diag.d3 { right: 230px; top: -40px; width: 90px; height: 820px; background: var(--azul-suave);
+    clip-path: polygon(70% 0, 100% 0, 30% 100%, 0 100%); }
+  .faixa { position: absolute; left: 0; top: 0; width: 100%; height: 8px;
+    background: linear-gradient(90deg, var(--azul), var(--azul-claro) 60%, transparent); }
+  .canto { position: absolute; right: 0; bottom: 0; width: 260px; height: 160px;
+    background: linear-gradient(135deg, transparent 50%, var(--azul-suave) 50%); }
+  .canto::after { content: ""; position: absolute; right: 0; bottom: 0; width: 140px; height: 90px;
+    background: linear-gradient(135deg, transparent 50%, var(--azul) 50%); }
+
+  /* textura "foto" geométrica em tons de cinza */
+  .grade-foto { position: absolute; inset: 0;
+    background:
+      repeating-linear-gradient(90deg, rgba(255,255,255,.06) 0 2px, transparent 2px 46px),
+      repeating-linear-gradient(0deg, rgba(255,255,255,.05) 0 2px, transparent 2px 46px),
+      linear-gradient(135deg, #2c3446, #0d1220); }
+
+  /* ---------- tipografia ---------- */
+  .rotulo { display: inline-block; font-size: 13px; font-weight: 600; letter-spacing: 2.5px;
+    text-transform: uppercase; color: var(--azul); margin-bottom: 14px; }
+  .rotulo::before { content: "■ "; font-size: 10px; vertical-align: 2px; }
+  h1 { font-size: 64px; line-height: 1.05; font-weight: 700; letter-spacing: -1px; }
+  h2 { font-size: 42px; line-height: 1.12; font-weight: 700; letter-spacing: -.5px; margin-bottom: 26px; }
+  h3 { font-size: 21px; font-weight: 600; margin-bottom: 8px; }
+  .destaque { color: var(--azul); }
+  p, li { font-size: 19px; line-height: 1.55; color: #33405e; }
+  .peq { font-size: 15px; color: var(--cinza); }
+  ul.lista { list-style: none; display: grid; gap: 12px; }
+  ul.lista li { padding-left: 30px; position: relative; }
+  ul.lista li::before { content: ""; position: absolute; left: 0; top: 11px; width: 14px; height: 14px;
+    border-radius: 50%; background: var(--azul-suave); border: 3px solid var(--azul); }
+  code, .mono { font-family: "JetBrains Mono", Consolas, monospace; }
+
+  /* ---------- componentes ---------- */
+  .grid { display: grid; gap: 22px; }
+  .g2 { grid-template-columns: 1fr 1fr; }
+  .g3 { grid-template-columns: repeat(3, 1fr); }
+  .g4 { grid-template-columns: repeat(4, 1fr); }
+
+  .cartao { background: var(--branco); border-radius: 18px; padding: 24px 26px; box-shadow: var(--sombra);
+    border: 1px solid var(--cinza-claro); position: relative; }
+  .cartao.azul { background: var(--azul); color: #fff; border: none; }
+  .cartao.azul p, .cartao.azul li, .cartao.azul h3 { color: #fff; }
+  .cartao.marinho { background: var(--marinho); border: none; }
+  .cartao.marinho p, .cartao.marinho h3, .cartao.marinho li { color: #e8eefc; }
+  .cartao.suave { background: var(--fundo); box-shadow: none; }
+  .cartao p { font-size: 17px; }
+
+  .icone { width: 56px; height: 56px; border-radius: 50%; display: grid; place-items: center;
+    background: var(--azul-suave); color: var(--azul); font-size: 26px; font-weight: 700; margin-bottom: 14px; }
+  .cartao.azul .icone, .cartao.marinho .icone { background: rgba(255,255,255,.15); color: #fff; }
+
+  .num { font-size: 15px; font-weight: 700; color: var(--azul); background: var(--azul-suave);
+    border-radius: 30px; padding: 4px 12px; display: inline-block; margin-bottom: 10px; }
+
+  .fundo-claro { background: var(--fundo); }
+
+  table.tab { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 16px; border-radius: 14px;
+    overflow: hidden; box-shadow: var(--sombra); }
+  table.tab th { background: var(--marinho); color: #fff; text-align: left; padding: 13px 16px; font-weight: 600; }
+  table.tab td { padding: 11px 16px; border-bottom: 1px solid var(--cinza-claro); background: #fff; color: #33405e; vertical-align: top; }
+  table.tab tr:nth-child(even) td { background: #f8f9fd; }
+  table.tab td:first-child { font-weight: 600; color: var(--marinho); }
+
+  .codigo { background: #0d1530; color: #d6e1ff; border-radius: 16px; padding: 22px 26px; font-size: 16.5px;
+    line-height: 1.6; font-family: "JetBrains Mono", Consolas, monospace; box-shadow: var(--sombra); white-space: pre; }
+  .codigo .k { color: #7aa2ff; } .codigo .s { color: #9be7a1; } .codigo .c { color: #7b86a8; font-style: italic; }
+  .codigo .r { background: rgba(76,125,255,.22); border-radius: 4px; }
+
+  .seta { font-size: 38px; color: var(--azul); font-weight: 700; display: grid; place-items: center; }
+
+  .tag { display: inline-block; font-size: 13px; font-weight: 600; padding: 4px 12px; border-radius: 30px;
+    background: var(--azul-suave); color: var(--azul); margin: 0 6px 6px 0; }
+  .tag.v { background: #e3f6ec; color: var(--verde); }
+  .tag.r { background: #fde8e8; color: var(--vermelho); }
+  .tag.a { background: #fff4d6; color: #a57800; }
+
+  /* vídeo embutido */
+  .moldura-video { position: relative; width: 880px; height: 495px; margin: 0 auto; border-radius: 18px; overflow: hidden;
+    background: #050a1a; box-shadow: 0 25px 60px rgba(0,0,0,.45), 0 0 0 2px rgba(76,125,255,.45); }
+  .video-aula { width: 100%; height: 100%; display: block; background: #050a1a; }
+  .video-ausente { position: absolute; inset: 0; display: none; flex-direction: column; align-items: center; justify-content: center; padding: 40px; }
+  .moldura-video.sem-video .video-aula { display: none; }
+  .moldura-video.sem-video .video-ausente { display: flex; }
+  /* quiz */
+  .quiz { cursor: pointer; transition: transform .2s; }
+  .quiz:hover { transform: translateY(-3px); }
+  .quiz .resposta { margin-top: 14px; font-weight: 600; color: var(--azul); opacity: 0; transition: opacity .3s; }
+  .quiz.aberto .resposta { opacity: 1; }
+  .quiz .dica { font-size: 13px; color: var(--cinza); margin-top: 10px; }
+  .quiz.aberto .dica { display: none; }
+
+  /* ---------- navegação ---------- */
+  #progresso { position: fixed; left: 0; bottom: 0; height: 4px; background: var(--azul-claro);
+    transition: width .35s ease; z-index: 10; }
+  #controles { position: fixed; right: 18px; bottom: 14px; display: flex; gap: 8px; z-index: 10; opacity: .25;
+    transition: opacity .3s; }
+  #controles:hover { opacity: 1; }
+  #controles button { width: 40px; height: 40px; border-radius: 50%; border: none; background: rgba(255,255,255,.9);
+    color: var(--marinho); font-size: 18px; cursor: pointer; font-weight: 700; }
+  #ajuda { position: fixed; left: 18px; bottom: 14px; color: rgba(255,255,255,.45); font-size: 12px; z-index: 10; }
+
+  /* ---------- impressão / PDF: um slide por página ---------- */
+  @media print {
+    @page { size: 1280px 720px; margin: 0; }
+    html, body { overflow: visible; background: #fff; height: auto; }
+    #palco { position: static; transform: none !important; width: 1280px; height: auto; }
+    .slide { position: relative; opacity: 1; visibility: visible; transform: none; width: 1280px; height: 720px;
+      page-break-after: always; break-after: page; }
+    .quiz .resposta { opacity: 1; }
+    #progresso, #controles, #ajuda { display: none; }
+    * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  }
+
+  /* ---------- extras desta aula ---------- */
+  .codigo.p { font-size: 14.5px; line-height: 1.55; padding: 18px 22px; }
+  .codigo .f { color: #ffd479; }            /* funções e métodos */
+  .codigo .n { color: #f5a3c7; }            /* números e constantes */
+  .codigo .ln { color: #4a5680; user-select: none; }
+  .terminal { background: #050a1a; color: #c9d6ff; border-radius: 14px; padding: 16px 20px; font-size: 15px;
+    line-height: 1.6; font-family: "JetBrains Mono", Consolas, monospace; white-space: pre; box-shadow: var(--sombra);
+    border-top: 26px solid #1b2442; position: relative; }
+  .terminal::before { content: "● ● ●"; position: absolute; top: -22px; left: 14px; font-size: 11px; color: #5d6a94; letter-spacing: 2px; }
+  .terminal .pr { color: #9be7a1; } .terminal .ok { color: #9be7a1; font-weight: 600; } .terminal .er { color: #ff8a8a; }
+  .terminal .c { color: #7b86a8; font-style: italic; }
+  .exp { display: grid; gap: 9px; }
+  .exp .item { display: grid; grid-template-columns: 34px 1fr; gap: 12px; align-items: start; }
+  .exp .bola { width: 30px; height: 30px; border-radius: 50%; background: var(--azul); color: #fff; font-weight: 700;
+    font-size: 14px; display: grid; place-items: center; margin-top: 2px; }
+  .exp p { font-size: 15.5px; line-height: 1.45; }
+  .exp code { background: var(--azul-suave); color: var(--azul); padding: 1px 6px; border-radius: 5px; font-size: 14px; }
+  table.tab code { background: var(--azul-suave); color: var(--azul); padding: 1px 6px; border-radius: 5px; font-size: 14px; }
+  table.tab.p { font-size: 14.5px; } table.tab.p td, table.tab.p th { padding: 8px 13px; }
+  .html-insp { background: #fff; border: 1px solid var(--cinza-claro); border-radius: 14px; padding: 16px 20px;
+    font-family: "JetBrains Mono", Consolas, monospace; font-size: 14.5px; line-height: 1.7; color: #33405e; box-shadow: var(--sombra); }
+  .html-insp .t { color: #a0347c; } .html-insp .a { color: #b25e00; } .html-insp .v { color: #1a7f37; }
+  .html-insp .mk { background: #fff1b8; border-radius: 4px; padding: 1px 3px; outline: 2px solid #e6a700; }
+  .passo-fluxo { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; }
+  .passo-fluxo .cartao { padding: 16px; text-align: center; }
+  .passo-fluxo p { font-size: 14.5px; line-height: 1.4; }
+  .tab-by td { font-size: 13.5px; padding: 5px 12px !important; vertical-align: middle !important; }
+  .tab-by td:nth-child(2) { font-family: "JetBrains Mono", Consolas, monospace; font-size: 12.5px; color: #33405e; font-weight: 400; }
+  .tab-by td code { font-size: 12.5px !important; }
+  .tab-by .sub { display: block; font-size: 12px; font-weight: 400; color: var(--cinza); margin-top: 3px; }
+  .tab-by .th { color: #a0347c; } .tab-by .ta { color: #b25e00; } .tab-by .tv { color: #1a7f37; }
+  .tab-by .mk { background: #fff1b8; border-radius: 4px; padding: 0 2px; outline: 1.5px solid #e6a700; }
+</style>
+</head>
+<body>
+<div id="palco">
+
+<!-- 1. CAPA -->
+<section class="slide capa">
+  <div class="diag d3"></div><div class="diag d2"></div><div class="diag d1"></div>
+  <div style="position:relative; z-index:2; max-width:640px; margin-top:70px">
+    <span class="rotulo">Engenharia de Requisitos, Teste e Qualidade de Software</span>
+    <h1>Teste Automatizado<br><span class="destaque">com Selenium</span></h1>
+    <p style="margin-top:26px; max-width:540px">Ambiente virtual · requirements.txt · Abrir o navegador · Encontrar campos · Digitar e clicar · Esperas · Teste completo na Wikipedia</p>
+    <div style="margin-top:44px; display:flex; gap:14px; align-items:center">
+      <span style="background:var(--marinho); color:#fff; padding:12px 26px; border-radius:40px; font-weight:600">Prof. Daniel Costa</span>
+      <span class="peq">17/11/2026 · Python + Selenium</span>
+    </div>
+  </div>
+</section>
+
+<!-- 2. ROTEIRO -->
+<section class="slide fundo-claro">
+  <div class="faixa"></div>
+  <span class="rotulo">Roteiro do encontro</span>
+  <h2>O que vamos <span class="destaque">aprender hoje</span></h2>
+  <div class="grid g3">
+    <div class="cartao"><span class="num">01</span><h3>Por que automatizar</h3><p>Teste manual × automatizado e o que é o Selenium.</p></div>
+    <div class="cartao"><span class="num">02</span><h3>Preparar o ambiente</h3><p>Ambiente virtual (venv) e o arquivo <code>requirements.txt</code>.</p></div>
+    <div class="cartao"><span class="num">03</span><h3>Primeiro teste</h3><p>Abrir o navegador, acessar um site e fechar.</p></div>
+    <div class="cartao azul"><span class="num" style="background:rgba(255,255,255,.2); color:#fff">04</span><h3>Encontrar elementos</h3><p>Inspecionar a página e usar os localizadores <code style="color:#fff">By</code>.</p></div>
+    <div class="cartao"><span class="num">05</span><h3>Interagir e esperar</h3><p>Digitar, apertar ENTER, clicar e esperar a página responder.</p></div>
+    <div class="cartao"><span class="num">06</span><h3>Teste na Wikipedia</h3><p>Pesquisar “Inteligência artificial” e verificar o resultado.</p></div>
+  </div>
+</section>
+
+<!-- 3. MANUAL x AUTOMATIZADO -->
+<section class="slide">
+  <div class="faixa"></div><div class="canto"></div>
+  <span class="rotulo">Motivação</span>
+  <h2>Teste manual <span class="destaque">×</span> teste automatizado</h2>
+  <div class="grid g2">
+    <div class="cartao">
+      <div class="icone">🙋</div>
+      <h3>Teste manual</h3>
+      <ul class="lista" style="gap:8px">
+        <li style="font-size:16.5px">Uma pessoa segue os passos do caso de teste com mouse e teclado.</li>
+        <li style="font-size:16.5px">Bom para explorar, avaliar usabilidade e testar algo que muda muito.</li>
+        <li style="font-size:16.5px">Lento e cansativo quando precisa ser <b>repetido</b> a cada nova versão.</li>
+      </ul>
+    </div>
+    <div class="cartao marinho">
+      <div class="icone">🤖</div>
+      <h3>Teste automatizado</h3>
+      <ul class="lista" style="gap:8px">
+        <li style="font-size:16.5px">Um <b>programa</b> executa os mesmos passos e confere o resultado sozinho.</li>
+        <li style="font-size:16.5px">Rápido, repetível e sem distração: ideal para <b>regressão</b>.</li>
+        <li style="font-size:16.5px">Exige esforço inicial para escrever e manutenção quando a tela muda.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="cartao suave" style="margin-top:22px; display:flex; gap:16px; align-items:center">
+    <span class="tag a">Lembre</span>
+    <p style="font-size:16.5px">Automatizar <b>não substitui</b> o raciocínio do QA. O script só confere o que alguém decidiu que deveria ser conferido, a partir dos <b>requisitos</b>.</p>
+  </div>
+</section>
+
+<!-- 3b. VÍDEO: MANUAL x AUTOMATIZADO -->
+<section class="slide escuro" style="background:var(--marinho)">
+  <div class="faixa"></div>
+  <span class="rotulo" style="color:var(--azul-claro)">Vídeo · 1 min</span>
+  <h2 style="color:#fff; margin-bottom:20px">Na prática: <span style="color:var(--azul-claro)">manual × automatizado</span></h2>
+  <div class="moldura-video" style="width:832px; height:468px">
+    <video class="video-aula" controls preload="auto" playsinline
+           src="videos/manual_automatizado/video_01_manual_automatizado_prof_daniel_costa.mp4"></video>
+    <div class="video-ausente">
+      <p style="color:#fff; font-size:20px; font-weight:600; margin-bottom:10px">Vídeo não encontrado</p>
+      <p style="color:#c9d6ff; font-size:15px; text-align:center; max-width:620px">Abra <code>videos/manual_automatizado/video_01_manual_automatizado.html</code> no Chrome, clique em <b>Baixar MP4</b> e salve o arquivo <code>video_01_manual_automatizado_prof_daniel_costa.mp4</code> nessa mesma pasta.</p>
+    </div>
+  </div>
+</section>
+
+<!-- 4. O QUE É SELENIUM -->
+<section class="slide fundo-claro">
+  <div class="faixa"></div>
+  <span class="rotulo">A ferramenta</span>
+  <h2>O que é o <span class="destaque">Selenium</span>?</h2>
+  <p style="margin-bottom:22px; max-width:1000px">Uma biblioteca gratuita que permite que um programa <b>controle um navegador de verdade</b>: abrir páginas, digitar, clicar e ler o que aparece na tela, como um usuário faria.</p>
+  <div style="display:grid; grid-template-columns:1fr 50px 1fr 50px 1fr; align-items:stretch">
+    <div class="cartao"><div class="icone">🐍</div><h3>Seu script Python</h3><p style="font-size:16px">O arquivo <code>teste.py</code> diz <b>o que fazer</b>: “abra a Wikipedia”, “digite IA”.</p></div>
+    <div class="seta">→</div>
+    <div class="cartao azul"><div class="icone">🔌</div><h3>WebDriver</h3><p style="font-size:16px">O “tradutor” (chromedriver) que transforma os comandos em ações no navegador.</p></div>
+    <div class="seta">→</div>
+    <div class="cartao"><div class="icone">🌐</div><h3>Navegador</h3><p style="font-size:16px">O Chrome abre na sua tela e executa tudo sozinho, passo a passo.</p></div>
+  </div>
+  <div class="grid g3" style="margin-top:22px; gap:14px">
+    <div class="cartao suave" style="padding:14px 18px"><p class="peq"><b>Linguagens:</b> Python, Java, C#, JavaScript…</p></div>
+    <div class="cartao suave" style="padding:14px 18px"><p class="peq"><b>Navegadores:</b> Chrome, Firefox, Edge, Safari.</p></div>
+    <div class="cartao suave" style="padding:14px 18px"><p class="peq"><b>Tipo de teste:</b> caixa preta, nível de sistema, pela interface.</p></div>
+  </div>
+</section>
+
+<!-- 5. SEÇÃO AMBIENTE -->
+<section class="slide escuro" style="background:var(--marinho)">
+  <div class="grade-foto" style="left:auto; width:46%; clip-path:polygon(22% 0,100% 0,100% 100%,0 100%)"></div>
+  <div class="diag" style="left:48%; top:0; width:140px; height:720px; background:var(--azul); clip-path:polygon(60% 0,100% 0,40% 100%,0 100%)"></div>
+  <div style="position:relative; z-index:2; margin-top:170px; max-width:600px">
+    <span class="rotulo" style="color:var(--azul-claro)">Parte 1</span>
+    <h1 style="color:#fff">Preparando o<br><span style="color:var(--azul-claro)">ambiente</span></h1>
+    <p style="color:#c5d2f5; margin-top:20px">Antes da primeira linha de teste: um lugar isolado para o projeto e uma lista do que ele precisa para funcionar.</p>
+  </div>
+</section>
+
+<!-- 6. PRÉ-REQUISITOS -->
+<section class="slide">
+  <div class="faixa"></div><div class="canto"></div>
+  <span class="rotulo">Parte 1 · Antes de começar</span>
+  <h2>O que precisa estar <span class="destaque">instalado</span></h2>
+  <div class="grid" style="grid-template-columns:1fr 1fr; gap:34px; align-items:start">
+    <div class="grid" style="gap:14px">
+      <div class="cartao" style="padding:18px 22px"><h3>🐍 Python 3</h3><p class="peq">Versão 3.9 ou mais nova. No Windows, marque <b>“Add Python to PATH”</b> na instalação.</p></div>
+      <div class="cartao" style="padding:18px 22px"><h3>🌐 Google Chrome</h3><p class="peq">O navegador que o Selenium vai controlar.</p></div>
+      <div class="cartao" style="padding:18px 22px"><h3>📝 Editor de código</h3><p class="peq">VS Code (recomendado) com a extensão Python.</p></div>
+    </div>
+    <div>
+      <p style="margin-bottom:12px; font-size:17px">Confira no terminal se o Python está instalado:</p>
+<div class="terminal"><span class="pr">$</span> python3 --version     <span class="c"># macOS / Linux</span>
+Python 3.12.4
+
+<span class="pr">&gt;</span> python --version      <span class="c"># Windows</span>
+Python 3.12.4</div>
+      <p class="peq" style="margin-top:12px">Se aparecer “comando não encontrado”, o Python não está instalado ou não está no PATH.</p>
+    </div>
+  </div>
+</section>
+
+<!-- 7. VENV -->
+<section class="slide fundo-claro">
+  <div class="faixa"></div>
+  <span class="rotulo">Parte 1 · Ambiente virtual</span>
+  <h2>O que é o <span class="destaque">venv</span>?</h2>
+  <div class="grid" style="grid-template-columns:1fr 1.1fr; gap:32px; align-items:start">
+    <div>
+      <p style="font-size:17.5px; margin-bottom:14px">Uma <b>pasta isolada</b> com um Python só para este projeto. As bibliotecas instaladas ficam <b>dentro dela</b>, e não no computador inteiro.</p>
+      <ul class="lista" style="gap:9px">
+        <li style="font-size:16px"><b>Sem conflito:</b> o projeto A usa Selenium 4.25 e o projeto B usa outra versão, sem um quebrar o outro.</li>
+        <li style="font-size:16px"><b>Organização:</b> dá para apagar a pasta <code>venv</code> e criar de novo a qualquer momento.</li>
+        <li style="font-size:16px"><b>Sem permissão de administrador:</b> tudo é instalado dentro do projeto.</li>
+      </ul>
+    </div>
+    <div>
+<div class="terminal"><span class="c"># 1. criar (uma vez só, dentro da pasta projeto)</span>
+<span class="pr">$</span> python3 -m venv venv
+
+<span class="c"># 2. ativar (toda vez que abrir o terminal)</span>
+<span class="pr">$</span> source venv/bin/activate     <span class="c"># macOS / Linux</span>
+<span class="pr">&gt;</span> venv\Scripts\activate        <span class="c"># Windows</span>
+
+<span class="c"># 3. ativado: o nome aparece antes do prompt</span>
+<span class="ok">(venv)</span> <span class="pr">$</span></div>
+      <p class="peq" style="margin-top:10px"><code>-m venv</code> = rode o módulo venv · o último <code>venv</code> = nome da pasta que será criada · <code>deactivate</code> sai do ambiente.</p>
+    </div>
+  </div>
+</section>
+
+<!-- 8. REQUIREMENTS -->
+<section class="slide">
+  <div class="faixa"></div><div class="canto"></div>
+  <span class="rotulo">Parte 1 · Dependências</span>
+  <h2>O arquivo <span class="destaque">requirements.txt</span></h2>
+  <div class="grid" style="grid-template-columns:1fr 1fr; gap:32px; align-items:start">
+    <div>
+      <p style="font-size:17.5px; margin-bottom:14px">É a <b>lista de compras</b> do projeto: diz quais bibliotecas (e quais versões) ele precisa para rodar.</p>
+<div class="codigo p"><span class="c"># requirements.txt</span>
+selenium<span class="k">&gt;=</span><span class="n">4.25</span></div>
+      <table class="tab p" style="margin-top:14px">
+        <tr><th>Escrita</th><th>Significado</th></tr>
+        <tr><td><code>selenium</code></td><td>qualquer versão</td></tr>
+        <tr><td><code>selenium==4.25.0</code></td><td>exatamente essa versão</td></tr>
+        <tr><td><code>selenium&gt;=4.25</code></td><td>4.25 ou mais nova</td></tr>
+      </table>
+    </div>
+    <div>
+<div class="terminal"><span class="c"># instala tudo o que está na lista</span>
+<span class="ok">(venv)</span> <span class="pr">$</span> pip install -r requirements.txt
+
+<span class="c"># confere o que foi instalado</span>
+<span class="ok">(venv)</span> <span class="pr">$</span> pip list</div>
+      <div class="cartao azul" style="margin-top:16px; padding:18px 22px">
+        <h3>Por que ele é importante?</h3>
+        <p style="font-size:15.5px">Qualquer colega (ou o professor, ou o servidor de testes) clona o projeto e, com <b>um comando</b>, tem exatamente o mesmo ambiente. Sem ele, cada um instala “do seu jeito” e o teste que passa na sua máquina falha na do outro.</p>
+      </div>
+      <p class="peq" style="margin-top:10px"><code>-r</code> = “read”: leia os pacotes deste arquivo.</p>
+    </div>
+  </div>
+</section>
+
+<!-- 9. ESTRUTURA DA PASTA -->
+<section class="slide fundo-claro">
+  <div class="faixa"></div>
+  <span class="rotulo">Parte 1 · Organização</span>
+  <h2>A pasta do <span class="destaque">projeto</span></h2>
+  <div class="grid" style="grid-template-columns:1fr 1.15fr; gap:34px; align-items:start">
+<div class="codigo" style="font-size:17px">📁 projeto/
+ ├── 📁 venv/              <span class="c">← ambiente virtual</span>
+ ├── 📄 requirements.txt   <span class="c">← dependências</span>
+ ├── 🐍 primeiro_teste.py  <span class="c">← abrir o navegador</span>
+ ├── 🐍 teste.py           <span class="c">← teste da Wikipedia</span>
+ └── 🐍 main.py            <span class="c">← próximo passo</span></div>
+    <div class="grid" style="gap:12px">
+      <div class="cartao" style="padding:16px 20px"><span class="num">1</span><p style="font-size:16px">Criar a pasta <code>projeto</code> e abrir no VS Code.</p></div>
+      <div class="cartao" style="padding:16px 20px"><span class="num">2</span><p style="font-size:16px">Criar e ativar o <code>venv</code>.</p></div>
+      <div class="cartao" style="padding:16px 20px"><span class="num">3</span><p style="font-size:16px">Criar o <code>requirements.txt</code> e rodar <code>pip install -r requirements.txt</code>.</p></div>
+      <div class="cartao azul" style="padding:16px 20px"><span class="num" style="background:rgba(255,255,255,.2); color:#fff">4</span><p style="font-size:16px">Criar o <code style="color:#fff">teste.py</code> e rodar com <code style="color:#fff">python teste.py</code>.</p></div>
+    </div>
+  </div>
+  <p class="peq" style="margin-top:16px">A pasta <code>venv</code> <b>não</b> é enviada para o GitHub nem para o colega: quem recebe o projeto recria com o <code>requirements.txt</code>.</p>
+</section>
+
+<!-- 10. SEÇÃO PRIMEIRO TESTE -->
+<section class="slide escuro" style="background:var(--marinho)">
+  <div class="grade-foto" style="left:auto; width:46%; clip-path:polygon(22% 0,100% 0,100% 100%,0 100%)"></div>
+  <div class="diag" style="left:48%; top:0; width:140px; height:720px; background:var(--azul); clip-path:polygon(60% 0,100% 0,40% 100%,0 100%)"></div>
+  <div style="position:relative; z-index:2; margin-top:170px; max-width:600px">
+    <span class="rotulo" style="color:var(--azul-claro)">Parte 2</span>
+    <h1 style="color:#fff">Primeiro teste:<br><span style="color:var(--azul-claro)">abrir o navegador</span></h1>
+    <p style="color:#c5d2f5; margin-top:20px">Cinco linhas de código para ver o Chrome abrir sozinho, entrar em um site e fechar.</p>
+  </div>
+</section>
+
+<!-- 11. PRIMEIRO SCRIPT -->
+<section class="slide">
+  <div class="faixa"></div><div class="canto"></div>
+  <span class="rotulo">Parte 2 · Hello, Selenium</span>
+  <h2>Abrindo a Wikipedia <span class="destaque">sozinho</span></h2>
+  <div class="grid" style="grid-template-columns:1.05fr 1fr; gap:30px; align-items:start">
+    <div>
+<div class="codigo"><span class="c"># primeiro_teste.py</span>
+<span class="ln">1</span>  <span class="k">from</span> selenium <span class="k">import</span> webdriver
+<span class="ln">2</span>  <span class="k">from</span> time <span class="k">import</span> sleep
+<span class="ln">3</span>
+<span class="ln">4</span>  navegador = webdriver.<span class="f">Chrome</span>()
+<span class="ln">5</span>  navegador.<span class="f">get</span>(<span class="s">"https://pt.wikipedia.org"</span>)
+<span class="ln">6</span>  <span class="f">print</span>(navegador.title)
+<span class="ln">7</span>  <span class="f">sleep</span>(<span class="n">3</span>)
+<span class="ln">8</span>  navegador.<span class="f">quit</span>()</div>
+<div class="terminal" style="margin-top:14px"><span class="ok">(venv)</span> <span class="pr">$</span> python primeiro_teste.py
+Wikipédia, a enciclopédia livre</div>
+    </div>
+    <div class="exp">
+      <div class="item"><span class="bola">1</span><p>Importa o <code>webdriver</code>, o módulo que controla navegadores.</p></div>
+      <div class="item"><span class="bola">2</span><p>Importa o <code>sleep</code>, que pausa o programa por alguns segundos.</p></div>
+      <div class="item"><span class="bola">4</span><p><code>webdriver.Chrome()</code> <b>abre uma janela nova do Chrome</b> e guarda o controle dela na variável <code>navegador</code>.</p></div>
+      <div class="item"><span class="bola">5</span><p><code>.get(url)</code> acessa o endereço e <b>espera a página carregar</b>. A URL precisa ter <code>https://</code>.</p></div>
+      <div class="item"><span class="bola">6</span><p><code>.title</code> é o texto da aba do navegador (a tag <code>&lt;title&gt;</code>).</p></div>
+      <div class="item"><span class="bola">7</span><p><code>sleep(3)</code> espera 3 segundos, só para vermos a página.</p></div>
+      <div class="item"><span class="bola">8</span><p><code>.quit()</code> <b>fecha o navegador</b> e encerra o driver. Sempre no final!</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- 12. COMANDOS DO NAVEGADOR -->
+<section class="slide fundo-claro">
+  <div class="faixa"></div>
+  <span class="rotulo">Parte 2 · Referência rápida</span>
+  <h2>Comandos do <span class="destaque">navegador</span></h2>
+  <div class="grid" style="grid-template-columns:1.35fr 1fr; gap:28px; align-items:start">
+    <table class="tab p">
+      <tr><th>Comando</th><th>O que faz</th></tr>
+      <tr><td><code>webdriver.Chrome()</code></td><td>Abre o Chrome. Pode receber <code>options=</code> com configurações.</td></tr>
+      <tr><td><code>.get("url")</code></td><td>Acessa um endereço e espera carregar</td></tr>
+      <tr><td><code>.maximize_window()</code></td><td>Deixa a janela em tela cheia (evita elementos escondidos)</td></tr>
+      <tr><td><code>.title</code></td><td>Título da aba (é um atributo, sem parênteses)</td></tr>
+      <tr><td><code>.current_url</code></td><td>Endereço atual da página</td></tr>
+      <tr><td><code>.back()</code> · <code>.refresh()</code></td><td>Voltar · recarregar a página</td></tr>
+      <tr><td><code>.close()</code></td><td>Fecha só a aba atual</td></tr>
+      <tr><td><code>.quit()</code></td><td>Fecha o navegador inteiro e encerra o driver</td></tr>
+    </table>
+    <div class="grid" style="gap:14px">
+      <div class="cartao azul" style="padding:18px 22px">
+        <div class="icone">🔧</div>
+        <h3>Selenium Manager</h3>
+        <p style="font-size:15.5px">Desde a versão 4.6, o Selenium <b>baixa sozinho</b> o chromedriver certo para o seu Chrome. Antes, era preciso baixar e configurar manualmente.</p>
+      </div>
+      <div class="cartao" style="padding:18px 22px">
+        <h3>Método × atributo</h3>
+        <p class="peq">Com parênteses é <b>ação</b>: <code>get()</code>, <code>quit()</code>. Sem parênteses é <b>informação</b>: <code>title</code>, <code>current_url</code>.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 13. SEÇÃO ELEMENTOS -->
+<section class="slide escuro" style="background:var(--marinho)">
+  <div class="grade-foto" style="left:auto; width:46%; clip-path:polygon(22% 0,100% 0,100% 100%,0 100%)"></div>
+  <div class="diag" style="left:48%; top:0; width:140px; height:720px; background:var(--azul); clip-path:polygon(60% 0,100% 0,40% 100%,0 100%)"></div>
+  <div style="position:relative; z-index:2; margin-top:170px; max-width:600px">
+    <span class="rotulo" style="color:var(--azul-claro)">Parte 3</span>
+    <h1 style="color:#fff">Como achar<br><span style="color:var(--azul-claro)">um campo</span></h1>
+    <p style="color:#c5d2f5; margin-top:20px">O Selenium não “vê” a tela como nós. Ele encontra cada campo, botão e texto pelo <b>código HTML</b> da página.</p>
+  </div>
+</section>
+
+<!-- 14. INSPECIONAR -->
+<section class="slide">
+  <div class="faixa"></div><div class="canto"></div>
+  <span class="rotulo">Parte 3 · Inspecionar elemento</span>
+  <h2>Descobrindo o HTML do <span class="destaque">campo de busca</span></h2>
+  <div class="grid" style="grid-template-columns:1fr 1.2fr; gap:32px; align-items:start">
+    <div class="grid" style="gap:12px">
+      <div class="cartao" style="padding:14px 18px"><span class="num">1</span><p style="font-size:16px">Abra a Wikipedia no Chrome.</p></div>
+      <div class="cartao" style="padding:14px 18px"><span class="num">2</span><p style="font-size:16px">Clique com o <b>botão direito</b> na barra de pesquisa → <b>Inspecionar</b> (ou <b>F12</b>).</p></div>
+      <div class="cartao" style="padding:14px 18px"><span class="num">3</span><p style="font-size:16px">O DevTools abre com a tag do campo <b>destacada</b>.</p></div>
+      <div class="cartao azul" style="padding:14px 18px"><span class="num" style="background:rgba(255,255,255,.2); color:#fff">4</span><p style="font-size:16px">Procure um atributo <b>único e estável</b>: <code style="color:#fff">id</code>, <code style="color:#fff">name</code>…</p></div>
+    </div>
+    <div>
+<div class="html-insp"><span class="t">&lt;input</span>
+   <span class="a">class</span>=<span class="v">"cdx-text-input__input"</span>
+   <span class="a">type</span>=<span class="v">"search"</span>
+   <span class="mk"><span class="a">name</span>=<span class="v">"search"</span></span>
+   <span class="a">placeholder</span>=<span class="v">"Pesquisar na Wikipédia"</span>
+   <span class="a">autocomplete</span>=<span class="v">"off"</span><span class="t">&gt;</span></div>
+      <div class="cartao suave" style="margin-top:14px; padding:16px 20px">
+        <p style="font-size:16px"><b>Tag</b> <code>input</code> = campo de digitação. <b>Atributos</b> = pares <code>nome="valor"</code>. O destacado <code>name="search"</code> é o que vamos usar no código:</p>
+        <p class="mono" style="font-size:15px; margin-top:8px; color:var(--azul)">find_element(By.NAME, "search")</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 15. LOCALIZADORES BY -->
+<section class="slide fundo-claro">
+  <div class="faixa"></div>
+  <span class="rotulo">Parte 3 · Localizadores</span>
+  <h2>As formas de achar: <span class="destaque">By</span></h2>
+  <table class="tab p tab-by">
+    <tr><th style="width:22%">Localizador · procura por…</th><th style="width:40%">HTML de referência <span style="font-weight:400; color:#c5d2f5; font-size:12.5px">· em <span style="background:#fff1b8; color:var(--marinho); border-radius:4px; padding:0 4px">amarelo</span>, o que o localizador usa</span></th><th>Exemplo no Python</th></tr>
+    <tr><td><code>By.ID</code><span class="sub">atributo id (deveria ser único)</span></td>
+      <td><span class="th">&lt;h1</span> <span class="mk"><span class="ta">id</span>=<span class="tv">"firstHeading"</span></span><span class="th">&gt;</span>Inteligência artificial<span class="th">&lt;/h1&gt;</span></td>
+      <td><code>find_element(By.ID, "firstHeading")</code></td></tr>
+    <tr><td><code>By.NAME</code><span class="sub">atributo name (formulários)</span></td>
+      <td><span class="th">&lt;input</span> <span class="ta">type</span>=<span class="tv">"search"</span> <span class="mk"><span class="ta">name</span>=<span class="tv">"search"</span></span><span class="th">&gt;</span></td>
+      <td><code>find_element(By.NAME, "search")</code></td></tr>
+    <tr><td><code>By.CLASS_NAME</code><span class="sub">uma classe CSS</span></td>
+      <td><span class="th">&lt;input</span> <span class="ta">class</span>=<span class="tv">"<span class="mk">mw-searchInput</span>"</span> <span class="ta">type</span>=<span class="tv">"search"</span><span class="th">&gt;</span></td>
+      <td><code>find_element(By.CLASS_NAME, "mw-searchInput")</code></td></tr>
+    <tr><td><code>By.CSS_SELECTOR</code><span class="sub">tag, #id, .classe, [atributo]</span></td>
+      <td><span class="mk"><span class="th">&lt;input</span></span> <span class="ta">type</span>=<span class="tv">"search"</span> <span class="mk"><span class="ta">name</span>=<span class="tv">"search"</span></span><span class="th">&gt;</span></td>
+      <td><code>find_element(By.CSS_SELECTOR, "input[name='search']")</code></td></tr>
+    <tr><td><code>By.XPATH</code><span class="sub">caminho no HTML, até pelo texto</span></td>
+      <td><span class="mk"><span class="th">&lt;h1</span></span> <span class="ta">id</span>=<span class="tv">"firstHeading"</span><span class="th">&gt;</span><span class="mk">Inteligência artificial</span><span class="th">&lt;/h1&gt;</span></td>
+      <td><code>find_element(By.XPATH, "//h1[text()='Inteligência artificial']")</code></td></tr>
+    <tr><td><code>By.LINK_TEXT</code><span class="sub">texto exato de um link</span></td>
+      <td><span class="th">&lt;a</span> <span class="ta">href</span>=<span class="tv">"/wiki/Wikipédia:Página_principal"</span><span class="th">&gt;</span><span class="mk">Página principal</span><span class="th">&lt;/a&gt;</span></td>
+      <td><code>find_element(By.LINK_TEXT, "Página principal")</code></td></tr>
+    <tr><td><code>By.TAG_NAME</code><span class="sub">nome da tag</span></td>
+      <td><span class="mk"><span class="th">&lt;h1</span></span> <span class="ta">id</span>=<span class="tv">"firstHeading"</span><span class="th">&gt;</span>Inteligência artificial<span class="mk"><span class="th">&lt;/h1&gt;</span></span></td>
+      <td><code>find_element(By.TAG_NAME, "h1")</code></td></tr>
+  </table>
+  <div class="cartao suave" style="margin-top:12px; display:flex; gap:14px; align-items:center; padding:10px 20px">
+    <span class="tag v" style="white-space:nowrap; margin:0">Ordem de preferência</span>
+    <p style="font-size:15px"><b>ID</b> → <b>NAME</b> → <b>CSS</b> → <b>XPATH</b>. Quanto mais simples e estável, menos o teste quebra quando a página muda.</p>
+  </div>
+</section>
+
+<!-- 16. FIND_ELEMENT -->
+<section class="slide">
+  <div class="faixa"></div><div class="canto"></div>
+  <span class="rotulo">Parte 3 · Buscar na página</span>
+  <h2><code style="font-size:38px">find_element</code> e seus <span class="destaque">parâmetros</span></h2>
+<div class="codigo" style="font-size:20px; text-align:center">campo = navegador.<span class="f">find_element</span>(<span class="r">By.NAME</span>, <span class="r"><span class="s">"search"</span></span>)</div>
+  <div class="grid g3" style="margin-top:22px">
+    <div class="cartao"><span class="num">1º parâmetro</span><h3>Estratégia</h3><p style="font-size:16px"><b>Como</b> procurar: <code>By.ID</code>, <code>By.NAME</code>, <code>By.XPATH</code>… Vem de <code>from selenium.webdriver.common.by import By</code>.</p></div>
+    <div class="cartao"><span class="num">2º parâmetro</span><h3>Valor</h3><p style="font-size:16px"><b>O que</b> procurar: o texto do atributo, sempre entre aspas. Precisa ser igual ao HTML.</p></div>
+    <div class="cartao azul"><span class="num" style="background:rgba(255,255,255,.2); color:#fff">Retorno</span><h3>WebElement</h3><p style="font-size:16px">Um objeto que representa o campo. É nele que vamos <b>digitar</b>, <b>clicar</b> e <b>ler</b>.</p></div>
+  </div>
+  <div class="grid g2" style="margin-top:18px; gap:18px">
+    <div class="cartao suave" style="padding:14px 20px"><p style="font-size:15.5px"><code>find_element</code> (singular) → devolve o <b>primeiro</b> encontrado. Se não achar: <span class="tag r">NoSuchElementException</span></p></div>
+    <div class="cartao suave" style="padding:14px 20px"><p style="font-size:15.5px"><code>find_elements</code> (plural) → devolve uma <b>lista</b> com todos. Se não achar: lista vazia <code>[]</code>, sem erro.</p></div>
+  </div>
+</section>
+
+<!-- 17. INTERAGIR -->
+<section class="slide fundo-claro">
+  <div class="faixa"></div>
+  <span class="rotulo">Parte 3 · Interagir com o elemento</span>
+  <h2>Como <span class="destaque">digitar</span>, apertar teclas e clicar</h2>
+  <div class="grid" style="grid-template-columns:1fr 1fr; gap:28px; align-items:start">
+    <div>
+<div class="codigo p"><span class="k">from</span> selenium.webdriver.common.keys <span class="k">import</span> Keys
+
+campo = navegador.<span class="f">find_element</span>(By.NAME, <span class="s">"search"</span>)
+campo.<span class="f">clear</span>()                        <span class="c"># apaga</span>
+campo.<span class="f">send_keys</span>(<span class="s">"Inteligência artificial"</span>)
+campo.<span class="f">send_keys</span>(Keys.ENTER)            <span class="c"># tecla</span>
+
+<span class="c"># ou tudo de uma vez:</span>
+campo.<span class="f">send_keys</span>(<span class="s">"Inteligência artificial"</span> + Keys.ENTER)</div>
+      <p class="peq" style="margin-top:10px"><code>Keys</code> tem as teclas especiais: <code>ENTER</code>, <code>TAB</code>, <code>ESCAPE</code>, <code>BACKSPACE</code>, <code>ARROW_DOWN</code>…</p>
+    </div>
+    <table class="tab p">
+      <tr><th>Método</th><th>O que faz</th></tr>
+      <tr><td><code>.send_keys("texto")</code></td><td><b>Digita</b> no campo, letra por letra, como um teclado</td></tr>
+      <tr><td><code>.clear()</code></td><td>Apaga o que já estiver escrito</td></tr>
+      <tr><td><code>.click()</code></td><td>Clica no elemento (botão, link, produto)</td></tr>
+      <tr><td><code>.submit()</code></td><td>Envia o formulário do campo</td></tr>
+      <tr><td><code>.text</code></td><td>Lê o texto visível do elemento</td></tr>
+      <tr><td><code>.get_attribute("value")</code></td><td>Lê um atributo (ex.: o que foi digitado)</td></tr>
+      <tr><td><code>.is_displayed()</code></td><td><code>True</code> se está visível na tela</td></tr>
+    </table>
+  </div>
+</section>
+
+<!-- 18. QUIZ LOCALIZADORES -->
+<section class="slide">
+  <div class="faixa"></div><div class="canto"></div>
+  <span class="rotulo">Desafio rápido</span>
+  <h2>Qual comando <span class="destaque">acha o campo</span>?</h2>
+  <p class="peq" style="margin:-12px 0 22px">Clique em cada cartão para revelar a resposta.</p>
+  <div class="grid g3">
+    <div class="cartao quiz"><div class="icone">1</div>
+      <p class="mono" style="font-size:14.5px">&lt;input id="user-name" type="text"&gt;</p>
+      <div class="dica">clique para ver</div><div class="resposta mono" style="font-size:14.5px">find_element(By.ID, "user-name")</div></div>
+    <div class="cartao quiz"><div class="icone">2</div>
+      <p class="mono" style="font-size:14.5px">&lt;input name="password" type="password"&gt;</p>
+      <div class="dica">clique para ver</div><div class="resposta mono" style="font-size:14.5px">find_element(By.NAME, "password")</div></div>
+    <div class="cartao quiz"><div class="icone">3</div>
+      <p class="mono" style="font-size:14.5px">&lt;button&gt;Add to cart&lt;/button&gt;<br><span class="peq">(sem id, sem name)</span></p>
+      <div class="dica">clique para ver</div><div class="resposta mono" style="font-size:14.5px">find_element(By.XPATH, "//button[text()='Add to cart']")</div></div>
+  </div>
+</section>
+
+<!-- 19. SEÇÃO ESPERAS -->
+<section class="slide escuro" style="background:var(--marinho)">
+  <div class="grade-foto" style="left:auto; width:46%; clip-path:polygon(22% 0,100% 0,100% 100%,0 100%)"></div>
+  <div class="diag" style="left:48%; top:0; width:140px; height:720px; background:var(--azul); clip-path:polygon(60% 0,100% 0,40% 100%,0 100%)"></div>
+  <div style="position:relative; z-index:2; margin-top:170px; max-width:600px">
+    <span class="rotulo" style="color:var(--azul-claro)">Parte 4</span>
+    <h1 style="color:#fff">Esperando a<br><span style="color:var(--azul-claro)">página responder</span></h1>
+    <p style="color:#c5d2f5; margin-top:20px">O script é muito mais rápido que a página. Se ele procurar um campo que ainda não apareceu, o teste quebra.</p>
+  </div>
+</section>
+
+<!-- 20. TIPOS DE ESPERA -->
+<section class="slide">
+  <div class="faixa"></div><div class="canto"></div>
+  <span class="rotulo">Parte 4 · Sincronização</span>
+  <h2><code style="font-size:38px">sleep</code> × <span class="destaque">WebDriverWait</span></h2>
+  <div class="grid g2" style="gap:26px">
+    <div class="cartao">
+      <div class="icone">⏱</div>
+      <h3>Espera fixa · <code>sleep(3)</code></h3>
+      <p style="font-size:16px">Para o programa por <b>exatamente</b> 3 segundos, aconteça o que acontecer.</p>
+      <div style="margin-top:10px"><span class="tag r">pode ser pouco</span><span class="tag r">pode ser demais</span></div>
+      <p class="peq" style="margin-top:8px">Útil para <b>demonstração</b> (ver o que está acontecendo), mas deixa o teste lento e instável.</p>
+    </div>
+    <div class="cartao marinho">
+      <div class="icone">🎯</div>
+      <h3>Espera inteligente · <code style="color:#9be7a1">WebDriverWait</code></h3>
+      <p style="font-size:16px">Verifica a condição várias vezes e <b>segue assim que ela for verdadeira</b>, até um tempo máximo.</p>
+      <div style="margin-top:10px"><span class="tag v">rápido</span><span class="tag v">confiável</span></div>
+      <p class="peq" style="margin-top:8px; color:#9fb3e8">Se o tempo máximo acabar: <b>TimeoutException</b> e o teste falha.</p>
+    </div>
+  </div>
+<div class="codigo p" style="margin-top:20px">espera = <span class="f">WebDriverWait</span>(<span class="r">navegador</span>, <span class="r"><span class="n">10</span></span>, <span class="r">ignored_exceptions=[StaleElementReferenceException]</span>)
+<span class="c">#                      ① qual navegador   ② máximo em segundos   ③ erros que não devem parar a espera (opcional)</span></div>
+</section>
+
+<!-- 21. EXPECTED CONDITIONS -->
+<section class="slide fundo-claro">
+  <div class="faixa"></div>
+  <span class="rotulo">Parte 4 · Condições de espera</span>
+  <h2><code style="font-size:38px">espera.until(...)</code> e o <span class="destaque">EC</span></h2>
+  <div class="grid" style="grid-template-columns:1fr 1.25fr; gap:26px; align-items:start">
+    <div>
+<div class="codigo p"><span class="k">from</span> selenium.webdriver.support <span class="k">import</span> \
+    expected_conditions <span class="k">as</span> EC
+
+titulo = espera.<span class="f">until</span>(
+    EC.<span class="f">visibility_of_element_located</span>(
+        (By.ID, <span class="s">"firstHeading"</span>)
+    )
+)</div>
+      <div class="cartao suave" style="margin-top:12px; padding:14px 18px">
+        <p style="font-size:15px"><b>Atenção aos parênteses duplos:</b> a condição recebe <b>um único</b> parâmetro, uma tupla <code>(By.ID, "firstHeading")</code>.</p>
+      </div>
+      <p class="peq" style="margin-top:10px"><code>until</code> repete a verificação (a cada 0,5 s) e <b>devolve o elemento</b> quando a condição for verdadeira.</p>
+    </div>
+    <table class="tab p">
+      <tr><th>Condição <code>EC.</code></th><th>Espera até…</th></tr>
+      <tr><td><code>presence_of_element_located</code></td><td>o elemento existir no HTML</td></tr>
+      <tr><td><code>visibility_of_element_located</code></td><td>existir <b>e</b> estar visível</td></tr>
+      <tr><td><code>element_to_be_clickable</code></td><td>estar visível e habilitado para clique</td></tr>
+      <tr><td><code>title_contains("texto")</code></td><td>o título da aba conter o texto</td></tr>
+      <tr><td><code>url_contains("texto")</code></td><td>o endereço conter o texto</td></tr>
+      <tr><td><code>text_to_be_present_in_element</code></td><td>o elemento mostrar um texto</td></tr>
+    </table>
+  </div>
+</section>
+
+<!-- 22. SEÇÃO WIKIPEDIA -->
+<section class="slide escuro" style="background:var(--marinho)">
+  <div class="grade-foto" style="left:auto; width:46%; clip-path:polygon(22% 0,100% 0,100% 100%,0 100%)"></div>
+  <div class="diag" style="left:48%; top:0; width:140px; height:720px; background:var(--azul); clip-path:polygon(60% 0,100% 0,40% 100%,0 100%)"></div>
+  <div style="position:relative; z-index:2; margin-top:170px; max-width:600px">
+    <span class="rotulo" style="color:var(--azul-claro)">Parte 5</span>
+    <h1 style="color:#fff">Teste completo:<br><span style="color:var(--azul-claro)">pesquisar IA</span></h1>
+    <p style="color:#c5d2f5; margin-top:20px">Juntando tudo: abrir a Wikipedia, achar a barra de pesquisa, digitar “Inteligência artificial” e <b>verificar</b> se o artigo certo abriu.</p>
+  </div>
+</section>
+
+<!-- 23. CASO DE TESTE -->
+<section class="slide">
+  <div class="faixa"></div><div class="canto"></div>
+  <span class="rotulo">Parte 5 · Do caso de teste ao código</span>
+  <h2>Primeiro o <span class="destaque">caso de teste</span>, depois o script</h2>
+  <div class="grid" style="grid-template-columns:1.1fr 1fr; gap:30px; align-items:start">
+    <table class="tab p">
+      <tr><th style="width:30%">CT-01</th><th>Busca de artigo na Wikipedia</th></tr>
+      <tr><td>Pré-condição</td><td>Chrome instalado e acesso à internet</td></tr>
+      <tr><td>Passos</td><td>1. Acessar pt.wikipedia.org<br>2. Na barra de pesquisa, digitar “Inteligência artificial”<br>3. Apertar ENTER</td></tr>
+      <tr><td>Esperado</td><td>Abre o artigo com o título “Inteligência artificial”</td></tr>
+      <tr><td>Técnica</td><td>Caixa preta · nível de sistema</td></tr>
+    </table>
+    <div class="passo-fluxo" style="grid-template-columns:1fr; gap:10px">
+      <div class="cartao" style="text-align:left; padding:12px 18px"><p><b>Passo 1</b> → <code>navegador.get(URL)</code></p></div>
+      <div class="cartao" style="text-align:left; padding:12px 18px"><p><b>Passo 2</b> → <code>find_element(By.NAME, "search")</code> + <code>send_keys(...)</code></p></div>
+      <div class="cartao" style="text-align:left; padding:12px 18px"><p><b>Passo 3</b> → <code>Keys.ENTER</code></p></div>
+      <div class="cartao azul" style="text-align:left; padding:12px 18px"><p><b>Esperado</b> → <code style="color:#fff">assert titulo == TERMO_BUSCA</code></p></div>
+    </div>
+  </div>
+  <p class="peq" style="margin-top:16px">Cada passo do caso de teste vira uma ou duas linhas de código. O <b>resultado esperado</b> vira uma <b>verificação automática</b>.</p>
+</section>
+
+<!-- 24. CÓDIGO 1/3: IMPORTS -->
+<section class="slide fundo-claro">
+  <div class="faixa"></div>
+  <span class="rotulo">Parte 5 · teste.py · 1 de 3</span>
+  <h2>Importações e <span class="destaque">dados do teste</span></h2>
+  <div class="grid" style="grid-template-columns:1.2fr 1fr; gap:26px; align-items:start">
+<div class="codigo p"><span class="ln"> 1</span>  <span class="k">from</span> selenium <span class="k">import</span> webdriver
+<span class="ln"> 2</span>  <span class="k">from</span> selenium.webdriver.common.by <span class="k">import</span> By
+<span class="ln"> 3</span>  <span class="k">from</span> selenium.webdriver.common.keys <span class="k">import</span> Keys
+<span class="ln"> 4</span>  <span class="k">from</span> selenium.webdriver.support.ui <span class="k">import</span> WebDriverWait
+<span class="ln"> 5</span>  <span class="k">from</span> selenium.webdriver.support <span class="k">import</span> expected_conditions <span class="k">as</span> EC
+<span class="ln"> 6</span>  <span class="k">from</span> selenium.common.exceptions <span class="k">import</span> StaleElementReferenceException
+<span class="ln"> 7</span>
+<span class="ln"> 8</span>  <span class="n">URL</span> = <span class="s">"https://pt.wikipedia.org"</span>
+<span class="ln"> 9</span>  <span class="n">TERMO_BUSCA</span> = <span class="s">"Inteligência artificial"</span></div>
+    <table class="tab p">
+      <tr><th>Linha</th><th>Para que serve</th></tr>
+      <tr><td>1</td><td><code>webdriver</code>: abrir e controlar o Chrome</td></tr>
+      <tr><td>2</td><td><code>By</code>: estratégias para achar elementos</td></tr>
+      <tr><td>3</td><td><code>Keys</code>: teclas especiais (ENTER)</td></tr>
+      <tr><td>4</td><td><code>WebDriverWait</code>: espera inteligente</td></tr>
+      <tr><td>5</td><td><code>EC</code>: condições de espera (apelido com <code>as</code>)</td></tr>
+      <tr><td>6</td><td>Erro de elemento “velho”, que vamos tolerar</td></tr>
+      <tr><td>8–9</td><td><b>Constantes</b> (MAIÚSCULAS): os dados do teste ficam no topo. Para testar outro assunto, troque só aqui.</td></tr>
+    </table>
+  </div>
+</section>
+
+<!-- 25. CÓDIGO 2/3: FUNÇÃO PESQUISAR -->
+<section class="slide">
+  <div class="faixa"></div><div class="canto"></div>
+  <span class="rotulo">Parte 5 · teste.py · 2 de 3</span>
+  <h2>A função <span class="destaque">pesquisar</span> e a espera</h2>
+  <div class="grid" style="grid-template-columns:1.15fr 1fr; gap:26px; align-items:start">
+    <div>
+<div class="codigo p"><span class="ln">12</span>  <span class="k">def</span> <span class="f">pesquisar</span>(navegador):
+<span class="ln">13</span>      barra_pesquisa = navegador.<span class="f">find_element</span>(By.NAME, <span class="s">"search"</span>)
+<span class="ln">14</span>      barra_pesquisa.<span class="f">clear</span>()
+<span class="ln">15</span>      barra_pesquisa.<span class="f">send_keys</span>(<span class="n">TERMO_BUSCA</span> + Keys.ENTER)
+<span class="ln">16</span>      <span class="k">return</span> <span class="n">True</span>
+<span class="ln">  </span>
+<span class="ln">19</span>  navegador = webdriver.<span class="f">Chrome</span>()
+<span class="ln">20</span>  navegador.<span class="f">maximize_window</span>()
+<span class="ln">22</span>  <span class="k">try</span>:
+<span class="ln">23</span>      navegador.<span class="f">get</span>(<span class="n">URL</span>)
+<span class="ln">25</span>      espera = <span class="f">WebDriverWait</span>(
+<span class="ln">26</span>          navegador, <span class="n">10</span>, ignored_exceptions=[StaleElementReferenceException]
+<span class="ln">27</span>      )
+<span class="ln">28</span>      espera.<span class="f">until</span>(pesquisar)</div>
+    </div>
+    <div class="exp">
+      <div class="item"><span class="bola">12</span><p>A função recebe o <code>navegador</code>, porque é assim que o <code>until</code> chama as funções de espera.</p></div>
+      <div class="item"><span class="bola">13</span><p>Acha a barra pelo atributo <code>name="search"</code> que vimos no Inspecionar.</p></div>
+      <div class="item"><span class="bola">15</span><p><b>Digita</b> o termo e aperta ENTER no mesmo comando.</p></div>
+      <div class="item"><span class="bola">16</span><p><code>True</code> avisa o <code>until</code>: “deu certo, pode parar de tentar”.</p></div>
+      <div class="item"><span class="bola">20</span><p>Janela maximizada: na tela pequena a Wikipedia esconde a barra de pesquisa.</p></div>
+      <div class="item"><span class="bola">28</span><p>Tenta rodar <code>pesquisar</code> por até 10 s. Se der <code>StaleElementReferenceException</code>, ignora e tenta de novo.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- 26. STALE ELEMENT -->
+<section class="slide fundo-claro">
+  <div class="faixa"></div>
+  <span class="rotulo">Parte 5 · Um problema real</span>
+  <h2>Por que o <span class="destaque">StaleElementReferenceException</span>?</h2>
+  <div class="passo-fluxo" style="grid-template-columns:1fr 40px 1fr 40px 1fr; gap:0; align-items:stretch">
+    <div class="cartao"><div class="icone" style="margin:0 auto 10px">1</div><p>A página carrega e o Selenium <b>acha a barra</b> de pesquisa.</p></div>
+    <div class="seta">→</div>
+    <div class="cartao azul"><div class="icone" style="margin:0 auto 10px">2</div><p style="color:#fff">Um JavaScript da Wikipedia <b>recria</b> a barra logo em seguida. A antiga some.</p></div>
+    <div class="seta">→</div>
+    <div class="cartao"><div class="icone" style="margin:0 auto 10px">💥</div><p>O <code>send_keys</code> tenta digitar na barra que <b>não existe mais</b>: elemento “velho” (stale).</p></div>
+  </div>
+  <div class="grid g2" style="margin-top:22px; gap:22px">
+    <div class="cartao" style="padding:18px 22px">
+      <h3>A solução que usamos</h3>
+      <p style="font-size:16px">Colocar a busca e a digitação <b>dentro da função</b> <code>pesquisar</code>. Se o erro acontecer, o <code>WebDriverWait</code> chama a função de novo, que acha a barra <b>nova</b>.</p>
+    </div>
+    <div class="cartao marinho" style="padding:18px 22px">
+      <h3>Lição de QA</h3>
+      <p style="font-size:16px">Páginas modernas mudam depois de carregar. Teste automatizado precisa <b>esperar e tentar de novo</b>, não confiar que a tela já está pronta.</p>
+    </div>
+  </div>
+</section>
+
+<!-- 27. CÓDIGO 3/3: VERIFICAÇÃO -->
+<section class="slide">
+  <div class="faixa"></div><div class="canto"></div>
+  <span class="rotulo">Parte 5 · teste.py · 3 de 3</span>
+  <h2>Verificar o resultado e <span class="destaque">fechar</span></h2>
+  <div class="grid" style="grid-template-columns:1.2fr 1fr; gap:26px; align-items:start">
+<div class="codigo p"><span class="ln">30</span>      titulo_artigo = espera.<span class="f">until</span>(
+<span class="ln">31</span>          EC.<span class="f">visibility_of_element_located</span>((By.ID, <span class="s">"firstHeading"</span>))
+<span class="ln">32</span>      )
+<span class="ln">33</span>      <span class="k">assert</span> titulo_artigo.text == <span class="n">TERMO_BUSCA</span>, (
+<span class="ln">34</span>          <span class="s">f"Esperado '{TERMO_BUSCA}', mas a página mostrou '{titulo_artigo.text}'"</span>
+<span class="ln">35</span>      )
+<span class="ln">36</span>      <span class="f">print</span>(<span class="s">"TESTE PASSOU: artigo aberto ="</span>, titulo_artigo.text)
+<span class="ln">37</span>
+<span class="ln">38</span>      <span class="f">input</span>(<span class="s">"Pressione ENTER para fechar o navegador..."</span>)
+<span class="ln">39</span>
+<span class="ln">40</span>  <span class="k">finally</span>:
+<span class="ln">41</span>      navegador.<span class="f">quit</span>()</div>
+    <div class="exp">
+      <div class="item"><span class="bola">30</span><p>Espera o título do artigo (<code>&lt;h1 id="firstHeading"&gt;</code>) <b>aparecer</b> e guarda o elemento.</p></div>
+      <div class="item"><span class="bola">33</span><p><code>assert</code> <b>é a verificação</b>: se a condição for falsa, o teste para com erro (<code>AssertionError</code>).</p></div>
+      <div class="item"><span class="bola">34</span><p>A mensagem depois da vírgula explica <b>o esperado e o obtido</b>, como num registro de defeito.</p></div>
+      <div class="item"><span class="bola">38</span><p><code>input</code> segura o navegador aberto até apertarmos ENTER.</p></div>
+      <div class="item"><span class="bola">40</span><p><code>try</code> / <code>finally</code>: o <code>finally</code> roda <b>sempre</b>, com sucesso ou erro. O navegador nunca fica aberto “perdido”.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- 28. EXECUTANDO -->
+<section class="slide fundo-claro">
+  <div class="faixa"></div>
+  <span class="rotulo">Parte 5 · Rodando o teste</span>
+  <h2>Passou ou <span class="destaque">falhou</span>?</h2>
+  <div class="grid g2" style="gap:26px; align-items:start">
+    <div>
+      <span class="tag v" style="margin-bottom:10px">Passou</span>
+<div class="terminal"><span class="ok">(venv)</span> <span class="pr">$</span> python teste.py
+<span class="ok">TESTE PASSOU: artigo aberto = Inteligência artificial</span>
+Pressione ENTER para fechar o navegador...</div>
+      <p class="peq" style="margin-top:12px">O Chrome abre, a busca é digitada sozinha e o artigo aparece.</p>
+    </div>
+    <div>
+      <span class="tag r" style="margin-bottom:10px">Falhou</span>
+<div class="terminal" style="font-size:13.5px">TERMO_BUSCA = "inteligência artificial"  <span class="c"># i minúsculo</span>
+
+<span class="er">AssertionError: Esperado 'inteligência artificial',</span>
+<span class="er">mas a página mostrou 'Inteligência artificial'</span></div>
+      <p class="peq" style="margin-top:12px">A Wikipedia abre o artigo certo, mas o título vem com <b>I maiúsculo</b>. O <code>assert</code> compara texto exato e aponta a diferença.</p>
+    </div>
+  </div>
+  <div class="cartao suave" style="margin-top:18px; display:flex; gap:16px; align-items:center; padding:16px 22px">
+    <span class="tag a">Importante</span>
+    <p style="font-size:16px">Um teste sem <code>assert</code> só “passeia” pela página. É a verificação que transforma o script em <b>teste</b>.</p>
+  </div>
+</section>
+
+<!-- 29. ERROS COMUNS -->
+<section class="slide">
+  <div class="faixa"></div><div class="canto"></div>
+  <span class="rotulo">Para não travar na aula</span>
+  <h2>Erros <span class="destaque">comuns</span> e como resolver</h2>
+  <table class="tab p">
+    <tr><th style="width:32%">Mensagem</th><th style="width:30%">Causa provável</th><th>Solução</th></tr>
+    <tr><td><code>ModuleNotFoundError: selenium</code></td><td>venv não ativado ou dependências não instaladas</td><td>Ativar o venv e rodar <code>pip install -r requirements.txt</code></td></tr>
+    <tr><td><code>NoSuchElementException</code></td><td>Localizador errado ou página ainda carregando</td><td>Conferir no Inspecionar e usar <code>WebDriverWait</code></td></tr>
+    <tr><td><code>TimeoutException</code></td><td>A condição não ficou verdadeira no tempo máximo</td><td>Conferir o localizador e o que realmente aparece na tela</td></tr>
+    <tr><td><code>StaleElementReferenceException</code></td><td>A página recriou o elemento</td><td>Procurar o elemento de novo (função + espera)</td></tr>
+    <tr><td><code>ElementNotInteractableException</code></td><td>Elemento existe, mas está escondido</td><td><code>maximize_window()</code> e <code>element_to_be_clickable</code></td></tr>
+    <tr><td>CAPTCHA no Google</td><td>O site bloqueia navegadores automatizados</td><td>Usar sites que permitem automação (Wikipedia, SauceDemo)</td></tr>
+  </table>
+</section>
+
+<!-- 30. EXERCÍCIO -->
+<section class="slide fundo-claro">
+  <div class="faixa"></div>
+  <span class="rotulo">Mão na massa</span>
+  <h2>Exercícios <span class="destaque">em sala</span></h2>
+  <div class="grid g3">
+    <div class="cartao"><span class="num">01</span><h3>Outro assunto</h3><p style="font-size:16px">Troque o <code>TERMO_BUSCA</code> para “Engenharia de software” e rode de novo. O teste passou?</p></div>
+    <div class="cartao"><span class="num">02</span><h3>Provocar a falha</h3><p style="font-size:16px">Digite o termo com um erro de grafia. Leia a mensagem do <code>AssertionError</code> e explique o que aconteceu.</p></div>
+    <div class="cartao azul"><span class="num" style="background:rgba(255,255,255,.2); color:#fff">03</span><h3>Nova verificação</h3><p style="font-size:16px">Adicione um <code style="color:#fff">assert</code> conferindo que <code style="color:#fff">"wiki"</code> está em <code style="color:#fff">navegador.current_url</code>.</p></div>
+  </div>
+  <div class="cartao suave" style="margin-top:22px; display:flex; gap:16px; align-items:center">
+    <span class="tag">Desafio</span>
+    <p style="font-size:16.5px">Use o Inspecionar para achar outro campo da Wikipedia (por exemplo, o link “Página principal”) e escreva o <code>find_element</code> para ele.</p>
+  </div>
+</section>
+
+<!-- 31. PRÓXIMOS PASSOS -->
+<section class="slide escuro" style="background:var(--marinho)">
+  <div class="diag" style="right:-60px; top:-40px; width:420px; height:820px; background:linear-gradient(160deg,var(--azul-claro),var(--azul)); clip-path:polygon(45% 0,100% 0,100% 100%,0 100%); opacity:.9"></div>
+  <div style="position:relative; z-index:2; max-width:800px">
+    <span class="rotulo" style="color:var(--azul-claro)">Próximo passo</span>
+    <h2 style="color:#fff">Testando uma <span style="color:var(--azul-claro)">loja virtual</span></h2>
+    <p style="color:#c5d2f5; font-size:20px; margin-bottom:26px">No <b>main.py</b>, vamos usar o site <b>saucedemo.com</b>, feito justamente para treinar automação de testes.</p>
+    <div class="grid g3" style="gap:16px">
+      <div class="cartao" style="background:rgba(255,255,255,.07); border-color:rgba(255,255,255,.15)">
+        <div class="icone">🔐</div><h3 style="color:#fff">Login</h3><p style="color:#e8eefc">Preencher usuário e senha e clicar em entrar.</p></div>
+      <div class="cartao" style="background:rgba(255,255,255,.07); border-color:rgba(255,255,255,.15)">
+        <div class="icone">👕</div><h3 style="color:#fff">Produto</h3><p style="color:#e8eefc">Achar um produto pelo nome e abrir a página dele.</p></div>
+      <div class="cartao" style="background:rgba(255,255,255,.07); border-color:rgba(255,255,255,.15)">
+        <div class="icone">🛒</div><h3 style="color:#fff">Carrinho</h3><p style="color:#e8eefc">Adicionar, remover e conferir o contador do carrinho.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- 32. RESUMO -->
+<section class="slide fundo-claro">
+  <div class="faixa"></div>
+  <span class="rotulo">Para revisar</span>
+  <h2>Resumo da <span class="destaque">aula</span></h2>
+  <div class="grid g3">
+    <div class="cartao"><h3>Ambiente</h3><p>venv isola o projeto; <code>requirements.txt</code> + <code>pip install -r</code> recriam tudo.</p></div>
+    <div class="cartao"><h3>Navegador</h3><p><code>Chrome()</code> abre, <code>get()</code> acessa, <code>quit()</code> fecha.</p></div>
+    <div class="cartao"><h3>Achar campos</h3><p>Inspecionar (F12) + <code>find_element(By.X, "valor")</code>.</p></div>
+    <div class="cartao azul"><h3>Interagir</h3><p><code style="color:#fff">send_keys</code> digita, <code style="color:#fff">Keys.ENTER</code> aperta, <code style="color:#fff">click</code> clica, <code style="color:#fff">text</code> lê.</p></div>
+    <div class="cartao"><h3>Esperar</h3><p><code>WebDriverWait</code> + <code>EC</code> em vez de <code>sleep</code>.</p></div>
+    <div class="cartao"><h3>Verificar</h3><p><code>assert</code> compara esperado × obtido; <code>finally</code> fecha o navegador.</p></div>
+  </div>
+</section>
+
+<!-- 33. ENCERRAMENTO -->
+<section class="slide capa">
+  <div class="diag d3"></div><div class="diag d2"></div><div class="diag d1"></div>
+  <div style="position:relative; z-index:2; margin-top:150px; max-width:620px">
+    <span class="rotulo">Encerramento</span>
+    <h1>Obrigado!<br><span class="destaque">Dúvidas?</span></h1>
+    <p style="margin-top:26px">Lembre-se: o script só é um <b>teste</b> quando compara o resultado obtido com o <b>resultado esperado</b> do requisito.</p>
+    <div style="margin-top:40px"><span style="background:var(--marinho); color:#fff; padding:12px 26px; border-radius:40px; font-weight:600">Prof. Daniel Costa</span></div>
+  </div>
+</section>
+
+</div>
+
+<div id="progresso"></div>
+<div id="ajuda">← → navegar · F tela cheia · P imprimir/PDF</div>
+<div id="controles">
+  <button id="btnAnterior" aria-label="Slide anterior">‹</button>
+  <button id="btnProximo" aria-label="Próximo slide">›</button>
+</div>
+
+<script>
+  const slides = Array.from(document.querySelectorAll(".slide"));
+  const total = slides.length;
+  let atual = 0;
+
+  // Rodapé com o nome do professor em todos os slides
+  slides.forEach((slide, i) => {
+    const rodape = document.createElement("div");
+    rodape.className = "rodape";
+    rodape.innerHTML =
+      '<span class="prof">Prof. Daniel Costa</span>' +
+      "<span>Engenharia de Requisitos, Teste e Qualidade de Software</span>" +
+      "<span>" + String(i + 1).padStart(2, "0") + " / " + total + "</span>";
+    slide.appendChild(rodape);
+  });
+
+  function mostrar(indice) {
+    atual = Math.max(0, Math.min(total - 1, indice));
+    slides.forEach((slide, i) => {
+      slide.classList.toggle("ativo", i === atual);
+      slide.classList.toggle("anterior", i < atual);
+      if (i !== atual) slide.querySelectorAll("video").forEach(v => v.pause());   // pausa vídeos ao sair do slide
+    });
+    document.getElementById("progresso").style.width = ((atual + 1) / total * 100) + "%";
+    if (location.protocol.startsWith("http") || location.protocol === "file:") {
+      try { history.replaceState(null, "", "#" + (atual + 1)); } catch (erro) { /* visualizadores sem histórico */ }
+    }
+  }
+
+  function ajustarEscala() {
+    const escala = Math.min(window.innerWidth / 1280, window.innerHeight / 720);
+    document.getElementById("palco").style.transform = "translate(-50%, -50%) scale(" + escala + ")";
+  }
+
+  document.addEventListener("keydown", (evento) => {
+    if (["ArrowRight", "PageDown", " ", "Enter"].includes(evento.key)) { evento.preventDefault(); mostrar(atual + 1); }
+    if (["ArrowLeft", "PageUp", "Backspace"].includes(evento.key)) { evento.preventDefault(); mostrar(atual - 1); }
+    if (evento.key === "Home") mostrar(0);
+    if (evento.key === "End") mostrar(total - 1);
+    if (evento.key.toLowerCase() === "f") {
+      document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen();
+    }
+    if (evento.key.toLowerCase() === "p") window.print();
+  });
+
+  document.getElementById("btnAnterior").onclick = () => mostrar(atual - 1);
+  document.getElementById("btnProximo").onclick = () => mostrar(atual + 1);
+  document.querySelectorAll(".quiz").forEach((cartao) => {
+    cartao.addEventListener("click", () => cartao.classList.toggle("aberto"));
+  });
+
+  // vídeo ausente: mostra instruções no lugar do player
+  document.querySelectorAll(".video-aula").forEach(v => {
+    v.addEventListener("error", () => v.closest(".moldura-video").classList.add("sem-video"));
+    // teclas dentro do vídeo (espaço, setas) controlam o vídeo, não os slides
+    v.addEventListener("keydown", e => e.stopPropagation());
+  });
+
+  window.addEventListener("resize", ajustarEscala);
+  ajustarEscala();
+  mostrar((parseInt(location.hash.slice(1), 10) || 1) - 1);
+</script>
+</body>
+</html>
